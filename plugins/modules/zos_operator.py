@@ -55,6 +55,24 @@ options:
     type: int
     required: false
     default: 1
+  console:
+    description:
+      - Specifies an optional suffix that will be used when generating the
+	    name of the EMCS console that will submit the operator command.
+	    The suffix must be an integer between 0-9999. If this argument is
+	    omitted, the integer used will be 0000.
+      - The generated console name consists of the first four characters of
+        the submitting user ID, concatenated with the provided integer.
+	    The integer will be left-padded with zeros to be four digits long.
+	    For example, if the user ID is "ZOAUSER", the generated console name
+	    will be "ZOAU0000".
+
+      - This argument is only necessary when running multiple opercmd
+	    invocations simultaneously with the same user ID. EMCS console names
+	    must be unique.
+    type: int
+    required: false
+    default: 0
 """
 
 EXAMPLES = r"""
@@ -191,6 +209,7 @@ def run_module():
         cmd=dict(type="str", required=True),
         verbose=dict(type="bool", required=False, default=False),
         wait_time_s=dict(type="int", required=False, default=1),
+        console=dict(type="int", required=False, default=0)
     )
 
     result = dict(changed=False)
@@ -265,6 +284,7 @@ def parse_params(params):
         cmd=dict(arg_type="str", required=True),
         verbose=dict(arg_type="bool", required=False),
         wait_time_s=dict(arg_type="int", required=False),
+        console=dict(type="int", required=False, default=0)
     )
     parser = BetterArgParser(arg_defs)
     new_params = parser.parse_args(params)
@@ -282,6 +302,7 @@ def run_operator_command(params):
 
     wait_s = params.get("wait_time_s")
     cmdtxt = params.get("cmd")
+    cons = params.get("console")
 
     use_wait_arg = False
     if zoau_version_checker.is_zoau_version_higher_than("1.2.4"):
@@ -291,7 +312,7 @@ def run_operator_command(params):
         kwargs.update({"wait": True})
 
     args = []
-    rc, stdout, stderr, elapsed = execute_command(cmdtxt, timeout_s=wait_s, *args, **kwargs)
+    rc, stdout, stderr, elapsed = execute_command(cmdtxt, timeout_s=wait_s, console=cons, *args, **kwargs)
 
     if rc > 0:
         message = "\nOut: {0}\nErr: {1}\nRan: {2}".format(stdout, stderr, cmdtxt)
